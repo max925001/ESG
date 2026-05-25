@@ -11,6 +11,14 @@ from apps.users.serializers import (
     CustomTokenRefreshSerializer
 )
 from apps.users.services import AuthService, SessionService
+import os
+from django.conf import settings
+
+def get_cookie_params():
+    is_vercel = os.environ.get('VERCEL') == '1'
+    if is_vercel or not settings.DEBUG:
+        return 'None', True
+    return 'Lax', False
 
 
 class RegisterView(views.APIView):
@@ -69,13 +77,12 @@ class LoginView(views.APIView):
         )
         
         # Set refresh token in HttpOnly cookie (SameSite=None in prod for cross-site cookie sharing)
-        from django.conf import settings
-        samesite = 'None' if not settings.DEBUG else 'Lax'
+        samesite, secure = get_cookie_params()
         response.set_cookie(
             key='refresh_token',
             value=login_data["refresh"],
             httponly=True,
-            secure=not settings.DEBUG,
+            secure=secure,
             samesite=samesite,
             path='/'
         )
@@ -128,14 +135,13 @@ class CustomTokenRefreshView(TokenRefreshView):
         
         # Set new rotated refresh token in HttpOnly cookie (SameSite=None in prod for cross-site cookie sharing)
         new_refresh = res_data.get("refresh")
-        from django.conf import settings
         if new_refresh:
-            samesite = 'None' if not settings.DEBUG else 'Lax'
+            samesite, secure = get_cookie_params()
             response.set_cookie(
                 key='refresh_token',
                 value=new_refresh,
                 httponly=True,
-                secure=not settings.DEBUG,
+                secure=secure,
                 samesite=samesite,
                 path='/'
             )
@@ -177,13 +183,12 @@ class LogoutView(views.APIView):
             status=status.HTTP_200_OK
         )
         # Delete refresh token cookie (using SameSite=None in prod to match creation flags)
-        from django.conf import settings
-        samesite = 'None' if not settings.DEBUG else 'Lax'
+        samesite, secure = get_cookie_params()
         response.delete_cookie(
             'refresh_token',
             path='/',
             samesite=samesite,
-            secure=not settings.DEBUG
+            secure=secure
         )
         return response
 

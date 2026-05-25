@@ -45,12 +45,13 @@ export const useAuthStore = create<AuthState>((set) => ({
   checkAuth: async () => {
     set({ isLoading: true });
     try {
+      const baseUrl = import.meta.env.VITE_API_URL || '';
       // Trigger silent token refresh using HTTP-only cookie automatically attached by the browser
-      const res = await axios.post('/api/v1/auth/refresh/', {}, { withCredentials: true });
+      const res = await axios.post(`${baseUrl}/api/v1/auth/refresh/`, {}, { withCredentials: true });
       const access = res.data.data.access;
       
       // Fetch user profile details using the new access token
-      const meRes = await axios.get('/api/v1/auth/me/', {
+      const meRes = await axios.get(`${baseUrl}/api/v1/auth/me/`, {
         headers: { Authorization: `Bearer ${access}` },
         withCredentials: true
       });
