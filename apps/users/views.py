@@ -68,14 +68,15 @@ class LoginView(views.APIView):
             status=status.HTTP_202_ACCEPTED
         )
         
-        # Set refresh token in HttpOnly, SameSite=Lax cookie
+        # Set refresh token in HttpOnly cookie (SameSite=None in prod for cross-site cookie sharing)
         from django.conf import settings
+        samesite = 'None' if not settings.DEBUG else 'Lax'
         response.set_cookie(
             key='refresh_token',
             value=login_data["refresh"],
             httponly=True,
             secure=not settings.DEBUG,
-            samesite='Lax',
+            samesite=samesite,
             path='/'
         )
         return response
@@ -125,16 +126,17 @@ class CustomTokenRefreshView(TokenRefreshView):
             status=status.HTTP_200_OK
         )
         
-        # Set new rotated refresh token in HttpOnly cookie
+        # Set new rotated refresh token in HttpOnly cookie (SameSite=None in prod for cross-site cookie sharing)
         new_refresh = res_data.get("refresh")
         from django.conf import settings
         if new_refresh:
+            samesite = 'None' if not settings.DEBUG else 'Lax'
             response.set_cookie(
                 key='refresh_token',
                 value=new_refresh,
                 httponly=True,
                 secure=not settings.DEBUG,
-                samesite='Lax',
+                samesite=samesite,
                 path='/'
             )
             
@@ -174,8 +176,15 @@ class LogoutView(views.APIView):
             },
             status=status.HTTP_200_OK
         )
-        # Delete refresh token cookie
-        response.delete_cookie('refresh_token', path='/')
+        # Delete refresh token cookie (using SameSite=None in prod to match creation flags)
+        from django.conf import settings
+        samesite = 'None' if not settings.DEBUG else 'Lax'
+        response.delete_cookie(
+            'refresh_token',
+            path='/',
+            samesite=samesite,
+            secure=not settings.DEBUG
+        )
         return response
 
 
