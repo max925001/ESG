@@ -1,9 +1,10 @@
 // frontend/src/lib/axios.ts
 import axios from 'axios';
 import { useAuthStore } from '../store/authStore';
+import { getBaseApiUrl } from '../utils/env';
 
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || '',
+  baseURL: getBaseApiUrl(),
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
@@ -67,7 +68,7 @@ apiClient.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const baseUrl = import.meta.env.VITE_API_URL || '';
+        const baseUrl = getBaseApiUrl();
         // Call django auth refresh endpoint directly - browser sends HttpOnly cookie automatically
         const res = await axios.post(`${baseUrl}/api/v1/auth/refresh/`, {}, { withCredentials: true });
         

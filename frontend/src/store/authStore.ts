@@ -2,6 +2,7 @@
 import { create } from 'zustand';
 import { User } from '../types';
 import axios from 'axios';
+import { getBaseApiUrl } from '../utils/env';
 
 interface AuthState {
   user: User | null;
@@ -34,7 +35,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   logout: async () => {
     try {
-      const baseUrl = import.meta.env.VITE_API_URL || '';
+      const baseUrl = getBaseApiUrl();
       const token = useAuthStore.getState().accessToken;
       await axios.post(`${baseUrl}/api/v1/auth/logout/`, {}, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -56,7 +57,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   checkAuth: async () => {
     set({ isLoading: true });
     try {
-      const baseUrl = import.meta.env.VITE_API_URL || '';
+      const baseUrl = getBaseApiUrl();
       // Trigger silent token refresh using HTTP-only cookie automatically attached by the browser
       const res = await axios.post(`${baseUrl}/api/v1/auth/refresh/`, {}, { withCredentials: true });
       const access = res.data.data.access;
@@ -74,6 +75,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         isInitialized: true 
       });
     } catch (err) {
+      console.error('checkAuth failed:', err);
       // Silent catch - if refresh fails, user remains unauthenticated
       set({ 
         accessToken: null, 
