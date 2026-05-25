@@ -74,53 +74,40 @@ The platform reads environment variables from a `.env` file at root. An example 
 * **Database Mappings**:
   * `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`: PostgreSQL connection details.
 * **Redis Connections**:
-  * `REDIS_URL`: Endpoint address for the Redis cache broker (e.g. `redis://redis:6379/0`).
+  * `REDIS_URL`: Endpoint ## 5. Recommended: 100% Free-Tier Unified Vercel Deployment Guide
 
----
+To avoid modern web browser blocks on **third-party cookies** (since subdomains under public suffixes like `.vercel.app` are treated as separate domains, causing browsers to block cross-site cookies), we deploy **both the frontend and backend inside a single Vercel Project**. 
 
-## 4. Production Considerations
+This hosts the entire platform on the **exact same domain** (e.g. `esg-platform.vercel.app`), making the session cookie **First-Party (Same-Site)** which bypasses all browser blocks.
 
-When transitioning from local development to production, configure the following parameters:
+### Single-Project Routing Topography
 
-1. **Security Settings**:
-   * Turn `DEBUG` to `False` in environment settings to hide traceback details from end users.
-   * Update all passwords and secret keys with random high-entropy strings.
-2. **Disable Visual Web Clients**:
-   * Remove the `pgweb` and `redis-commander` containers from `docker-compose.yml` to prevent expose of backend metrics.
-3. **Application Servers**:
-   * Run the Django application using a production WSGI HTTP server (e.g. **Gunicorn**) with multiple worker threads, rather than the default `manage.py runserver` dev script.
-4. **Database Volumes & Backups**:
-   * Mount PostgreSQL data directory to durable persistent host volumes. Configure daily automated backup cron tasks.
-
----
-
-## 5. 100% Free-Tier Vercel Deployment Guide
-
-This section outlines how to deploy both the **React Frontend** and **Django Backend** to **Vercel** using entirely free serverless hosting services, backed by Neon PostgreSQL and Upstash Redis.
-
-### Vercel Serverless Architecture
-
-| Component | Vercel Deployment Method | Configurations |
-| :--- | :--- | :--- |
-| **Backend API** | Vercel Serverless Functions (`@vercel/python`) | Runs on Python 3.12, routes mapped in `vercel.json`. |
-| **Ingestion Tasks** | Synchronous Eager Execution | **Celery workers cannot run as background processes in serverless functions.** We set `CELERY_TASK_ALWAYS_EAGER=True` to run parsing tasks synchronously within the Lambda execution context. |
-| **Frontend client** | Vercel Static Hosting | Built from the `frontend/` subdirectory. |
+```
+                       ┌───────────────────────────────┐
+                       │      Vercel Deployment        │
+                       │  (esg-platform.vercel.app)    │
+                       └───────────────┬───────────────┘
+                                       │
+                ┌──────────────────────┴──────────────────────┐
+                │                                             │
+                ▼                                             ▼
+     [Requests: /api/*]                              [Requests: /*]
+     Routed to: @vercel/python                       Routed to: React static
+     (config/wsgi.py lambda)                         (frontend/dist/index.html)
+```
 
 ---
 
 ### Step 1: Database Setup (Neon)
-The system connects to your Neon database cluster:
+Connect to your Neon database cluster:
 * **ConnectionString (DATABASE_URL)**:
   ```
   postgresql://neondb_owner:npg_pHknr3c7wqQj@ep-restless-paper-ao1b8l71-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
   ```
-* **Django Config**:
-  `config/settings/base.py` automatically parses this URL and establishes connections with SSL enabled (`sslmode=require`).
 
 ---
 
 ### Step 2: Redis Whitelist Cache (Upstash)
-Upstash handles JWT session whitelists and Celery task metadata:
 * **ConnectionString (REDIS_URL)**:
   ```
   rediss://default:gQAAAAAAAZ0DAAIgcDE0N2JmZjIwNWZmYzc0YjFiOWVhMzM2M2YzY2Y0OGJjNA@funny-chigger-105731.upstash.io:6379
@@ -128,36 +115,24 @@ Upstash handles JWT session whitelists and Celery task metadata:
 
 ---
 
-### Step 3: Backend Vercel Serverless Deployment
-To deploy your Django project to Vercel, we created two files in the repository root:
-1. **[vercel.json](file:///c:/Users/shiva/OneDrive/Desktop/SAP/vercel.json)**: Configures the Python 3.12 builder and routes all `/api/(.*)` requests to `config/wsgi.py`.
-2. **[wsgi.py](file:///c:/Users/shiva/OneDrive/Desktop/SAP/config/wsgi.py)**: Added the `app = application` alias so Vercel can find the serverless entrypoint.
+### Step 3: Deployment Setup on Vercel
+We have configured the root **[vercel.json](file:///c:/Users/shiva/OneDrive/Desktop/SAP/vercel.json)** file to build both the Python backend and the static Vite frontend under a single project domain.
 
-#### Deploying the Backend on Vercel:
-1. Go to your [Vercel Dashboard](https://vercel.com) and click **Add New Project**.
-2. Connect your GitHub Repository.
+#### Setup Instructions:
+1. Go to your [Vercel Dashboard](https://vercel.com) and click **Add New** $\rightarrow$ **Project**.
+2. Connect your GitHub Repository and click **Import** next to your `max925001/ESG` repo.
 3. Configure the following project parameters:
-   * **Project Name**: `esg-api`
-   * **Framework Preset**: `Other` (Vercel will detect `vercel.json` and build Python automatically)
-   * **Root Directory**: `.` (leave as repository root)
-4. Add the following **Environment Variables** in the Vercel dashboard:
-   * `DJANGO_SETTINGS_MODULE` = `config.settings.base` (Ensures Django uses base settings for Neon/Upstash)
+   * **Project Name**: `esg-platform`
+   * **Framework Preset**: `Other` *(Vercel will read `vercel.json` and build both segments)*
+   * **Root Directory**: `.` *(leave as repository root)*
+4. Expand the **Environment Variables** section and add the following keys and values:
+   * `DJANGO_SETTINGS_MODULE` = `config.settings.base`
    * `DEBUG` = `False`
-   * `SECRET_KEY` = `your_django_high_entropy_secret_key`
+   * `SECRET_KEY` = `django-insecure-prod-key-for-esg-portal-99`
    * `DATABASE_URL` = `postgresql://neondb_owner:npg_pHknr3c7wqQj@ep-restless-paper-ao1b8l71-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require`
    * `REDIS_URL` = `rediss://default:gQAAAAAAAZ0DAAIgcDE0N2JmZjIwNWZmYzc0YjFiOWVhMzM2M2YzY2Y0OGJjNA@funny-chigger-105731.upstash.io:6379`
    * `CELERY_BROKER_URL` = `rediss://default:gQAAAAAAAZ0DAAIgcDE0N2JmZjIwNWZmYzc0YjFiOWVhMzM2M2YzY2Y0OGJjNA@funny-chigger-105731.upstash.io:6379`
    * `CELERY_RESULT_BACKEND` = `rediss://default:gQAAAAAAAZ0DAAIgcDE0N2JmZjIwNWZmYzc0YjFiOWVhMzM2M2YzY2Y0OGJjNA@funny-chigger-105731.upstash.io:6379`
-   * `CELERY_TASK_ALWAYS_EAGER` = `True` (Critical: Tells the backend to process parsing synchronously within the serverless function thread instead of waiting for a celery worker daemon)
-   * `JWT_SECRET_KEY` = `your_jwt_signing_secret`
-
-   * `CORS_ALLOWED_ORIGINS` = `https://your-frontend.vercel.app` (Replace with your actual Vercel client URL from Step 4 once deployed)
-5. Click **Deploy**. Copy the resulting Vercel URL (e.g. `https://esg-api.vercel.app`).
-
----
-
-### Step 4: Frontend Vercel Static Deployment
-1. Go to your Vercel Dashboard and click **Add New Project**.
 2. Connect your GitHub repository and set the **Root Directory** to `frontend` (Vercel will prompt you for this, select the `frontend` subfolder).
 3. Configure the following project options:
    * **Framework Preset**: `Vite`

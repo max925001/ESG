@@ -8,6 +8,13 @@
         "maxLambdaSize": "15mb",
         "runtime": "python3.12"
       }
+    },
+    {
+      "src": "frontend/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
     }
   ],
   "routes": [
@@ -16,8 +23,24 @@
       "dest": "config/wsgi.py"
     },
     {
-      "src": "/(.*)",
+      "src": "/media/(.*)",
       "dest": "config/wsgi.py"
+    },
+    {
+      "src": "/assets/(.*)",
+      "dest": "frontend/dist/assets/$1"
+    },
+    {
+      "src": "/favicon.svg",
+      "dest": "frontend/dist/favicon.svg"
+    },
+    {
+      "src": "/icons.svg",
+      "dest": "frontend/dist/icons.svg"
+    },
+    {
+      "src": "/((?!api/|media/|assets/|favicon.svg|icons.svg).*).*",
+      "dest": "frontend/dist/index.html"
     }
   ]
 }

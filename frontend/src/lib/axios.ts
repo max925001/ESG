@@ -67,8 +67,9 @@ apiClient.interceptors.response.use(
       isRefreshing = true;
 
       try {
+        const baseUrl = import.meta.env.VITE_API_URL || '';
         // Call django auth refresh endpoint directly - browser sends HttpOnly cookie automatically
-        const res = await axios.post('/api/v1/auth/refresh/', {}, { withCredentials: true });
+        const res = await axios.post(`${baseUrl}/api/v1/auth/refresh/`, {}, { withCredentials: true });
         
         const newAccess = res.data.data.access;
 

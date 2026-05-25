@@ -17,7 +17,8 @@ from django.conf import settings
 def get_cookie_params():
     is_vercel = os.environ.get('VERCEL') == '1'
     if is_vercel or not settings.DEBUG:
-        return 'None', True
+        samesite = os.environ.get('COOKIE_SAMESITE', 'Lax')
+        return samesite, True
     return 'Lax', False
 
 

@@ -10,7 +10,7 @@ interface AuthState {
   isLoading: boolean;
   isInitialized: boolean;
   login: (access: string, user: User) => void;
-  logout: () => void;
+  logout: () => Promise<void>;
   setAccessToken: (access: string) => void;
   setUser: (user: User) => void;
   setLoading: (loading: boolean) => void;
@@ -32,8 +32,19 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ accessToken: access, user, isAuthenticated: true });
   },
 
-  logout: () => {
-    set({ accessToken: null, user: null, isAuthenticated: false });
+  logout: async () => {
+    try {
+      const baseUrl = import.meta.env.VITE_API_URL || '';
+      const token = useAuthStore.getState().accessToken;
+      await axios.post(`${baseUrl}/api/v1/auth/logout/`, {}, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        withCredentials: true
+      });
+    } catch (err) {
+      console.error('Failed to log out from server:', err);
+    } finally {
+      set({ accessToken: null, user: null, isAuthenticated: false });
+    }
   },
 
   setUser: (user) => {
